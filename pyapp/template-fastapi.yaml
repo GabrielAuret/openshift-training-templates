@@ -1,0 +1,168 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: fast-app-template
+objects:
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: fast-app-origin-image
+    spec:
+      lookupPolicy:
+        local: true
+      tags:
+        - name: latest
+          from:
+            kind: DockerImage
+            name: python:3.9 # Use the desired Python version
+          referencePolicy:
+            type: Source
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: fast-app-new-image
+      labels:
+        app: ${APP_NAME}
+    spec:
+      lookupPolicy:
+        local: false
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: fast-app-build
+      labels:
+        app: ${APP_NAME}
+    spec:
+      nodeSelector: null
+      output:
+        to:
+          kind: ImageStreamTag
+          name: fast-app-new-image:latest
+      postCommit: {}
+      resources: {}
+      source:
+        contextDir: pyapp
+        git:
+          uri: https://github.com/loupiote03/openshift_training.git
+          ref: ${GITHUB_BRANCH}
+        type: Git
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile
+          from:
+            kind: ImageStreamTag
+            name: fast-app-origin-image:latest
+        type: Docker
+      triggers:
+      - type: ConfigChange
+      - imageChange: {}
+        type: ImageChange
+  - apiVersion: apps.openshift.io/v1
+    kind: DeploymentConfig
+    metadata:
+      name: fast-app-deploy
+      labels:
+        app: ${APP_NAME}
+    spec:
+      replicas: 1
+      selector:
+        app: ${APP_NAME}
+        deploymentconfig: fast-app-deploy
+      strategy:
+        resources: {}
+      template:
+        metadata:
+          labels:
+            app: ${APP_NAME}
+            deploymentconfig: fast-app-deploy
+        spec:
+          containers:
+          - name: fast-app-container
+            image: fast-app-new-image:latest
+            env:
+              - name: DB_TYPE
+                value: fake
+              - name: DB_NAME
+                value: restaurants
+              - name: DB_COLLECTION
+                value: restaurants
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 8080
+            readinessProbe:
+              httpGet:
+                path: /
+                port: 8080
+            resources:
+              limits:
+                cpu: 200m
+                memory: 512Mi
+              requests:
+                cpu: 100m
+                memory: 256Mi
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+      test: false
+      triggers:
+      - type: ConfigChange
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+          - fast-app-container
+          from:
+            kind: ImageStreamTag
+            name: fast-app-new-image:latest
+        type: ImageChange
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: fast-app-service
+      labels:
+        app: ${APP_NAME}
+    spec:
+      ports:
+        - protocol: TCP
+          port: 8080
+          targetPort: 8080
+      selector:
+        app: ${APP_NAME}
+        deploymentconfig: fast-app-deploy
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: fast-app-route
+      labels:
+        app: ${APP_NAME}
+    spec:
+      # host: fast-app-${{OPENSHIFT_PROJECT}}.${{OPENSHIFT_CLUSTER_DOMAIN}}
+      to:
+        kind: Service
+        name: fast-app-service
+        weight: 100
+      port:
+        targetPort: 8080
+      wildcardPolicy: None
+parameters:
+  - name: GITHUB_BRANCH
+    required: true
+  - name: APP_NAME 
+    required: true
+#     value: fast-app
+#   - name: LABEL 
+#     required: true
+#     value: fast-app
+#   - name: OPENSHIFT_PROJECT
+#     required: true
+#   - name: OPENSHIFT_CLUSTER_DOMAIN 
+#     required: true
+#   - name: DB_TYPE
+#     required: true
+#     value: fake
+#   - name: DB_NAME
+#     required: true
+#     value: restaurants
+#   - name: DB_COLLECTION
+#     required: true
+#     value: restaurants
