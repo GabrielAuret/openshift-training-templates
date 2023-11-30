@@ -14,7 +14,7 @@ objects:
         - name: latest
           from:
             kind: DockerImage
-            name: node:14.17.5 # Use the desired Python version
+            name: ${DOCKER_IMAGE}
           referencePolicy:
             type: Source
   - apiVersion: image.openshift.io/v1
@@ -156,3 +156,6 @@ parameters:
   - name: CONTEXT_DIR
     required: true
     value: node-hello-world
+  - name: DOCKER_IMAGE
+    required: true
+    value: node:14.17.5
