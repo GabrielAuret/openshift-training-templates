@@ -120,12 +120,12 @@ parameters:
   displayName: Git Repository URL
   name: SOURCE_REPOSITORY_URL
   required: true
-  value: https://github.com/GabrielAuret/openshift-training-templates.git
+  value: https://github.com/monodot/container-up.git
 - description: Set this to a branch name, tag or other ref of your repository if you
     are not using the default branch.
   displayName: Git Reference
   name: SOURCE_REPOSITORY_REF
-  value: main
+  value: master
 - description: Set this to the relative path to your project if it is not in the root
     of your repository.
   displayName: Context Directory
