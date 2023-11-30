@@ -15,4 +15,5 @@ COPY . .
 EXPOSE 8080
 
 # command to run on container start
-CMD [ "node", "./bin/www" ]
+# CMD [ "node", "./bin/www" ]
+CMD [ "npm", "start" ]
