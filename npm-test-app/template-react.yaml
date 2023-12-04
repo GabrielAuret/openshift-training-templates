@@ -14,7 +14,8 @@ objects:
         - name: latest
           from:
             kind: DockerImage
-            name: node:14.17.5
+            # name: node:14.17.5
+            name: node:16.16
           referencePolicy:
             type: Source
   - apiVersion: image.openshift.io/v1
