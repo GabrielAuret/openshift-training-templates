@@ -1,0 +1,163 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: ${NAME}
+objects:
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: ${NAME}-origin-image
+    spec:
+      lookupPolicy:
+        local: true
+      tags:
+        - name: latest
+          from:
+            kind: DockerImage
+            # name: node:14.17.5
+            name: node:16.16
+          referencePolicy:
+            type: Source
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      name: ${NAME}-new-image
+      labels:
+        app: ${NAME}
+    spec:
+      lookupPolicy:
+        local: false
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: ${NAME}-build
+      labels:
+        app: ${NAME}
+    spec:
+      nodeSelector: null
+      output:
+        to:
+          kind: ImageStreamTag
+          name: ${NAME}-new-image:latest
+      postCommit: {}
+      resources: {}
+      source:
+        contextDir: ${CONTEXT_DIR}
+        git:
+          uri: ${SOURCE_REPOSITORY_URL}
+          ref: ${GITHUB_BRANCH}
+        type: Git
+      strategy:
+        dockerStrategy:
+          dockerfilePath: Dockerfile
+          from:
+            kind: ImageStreamTag
+            name: ${NAME}-origin-image:latest
+        type: Docker
+      triggers:
+      - type: ConfigChange
+      - imageChange: {}
+        type: ImageChange
+  - apiVersion: apps.openshift.io/v1
+    kind: DeploymentConfig
+    metadata:
+      name: ${NAME}-deploy
+      labels:
+        app: ${NAME}
+    spec:
+      replicas: 1
+      selector:
+        app: ${NAME}
+        deploymentconfig: ${NAME}-deploy
+      strategy:
+        resources: {}
+      template:
+        metadata:
+          labels:
+            app: ${NAME}
+            deploymentconfig: ${NAME}-deploy
+        spec:
+          containers:
+          - name: ${NAME}-container
+            image: ${NAME}-new-image:latest
+            env:
+              - name: DB_TYPE
+                value: fake
+              - name: DB_NAME
+                value: restaurants
+              - name: DB_COLLECTION
+                value: restaurants
+            livenessProbe:
+              httpGet:
+                path: /
+                port: 8080
+            readinessProbe:
+              httpGet:
+                path: /
+                port: 8080
+            resources:
+              limits:
+                cpu: 200m
+                memory: 512Mi
+              requests:
+                cpu: 100m
+                memory: 256Mi
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+      test: false
+      triggers:
+      - type: ConfigChange
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+          - ${NAME}-container
+          from:
+            kind: ImageStreamTag
+            name: ${NAME}-new-image:latest
+        type: ImageChange
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${NAME}-service
+      labels:
+        app: ${NAME}
+    spec:
+      ports:
+        - protocol: TCP
+          port: 8080
+          targetPort: 8080
+      selector:
+        app: ${NAME}
+        deploymentconfig: ${NAME}-deploy
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: ${NAME}-route
+      labels:
+        app: ${NAME}
+    spec:
+      to:
+        kind: Service
+        name: ${NAME}-service
+        weight: 100
+      port:
+        targetPort: 8080
+      wildcardPolicy: None
+parameters:
+  - name: GITHUB_BRANCH
+    displayName: Github branch
+    required: true
+    value: feature/test
+  - name: NAME 
+    displayName: Name
+    required: true
+    value: simple-react-appli
+  - name: SOURCE_REPOSITORY_URL
+    displayName: Git Repository URL
+    required: true
+    value: https://github.com/GabrielAuret/openshift-training-templates.git
+  - name: CONTEXT_DIR
+    displayName: Context Directory
+    required: true
+    value: simple-react-app
