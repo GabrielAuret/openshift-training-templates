@@ -1,24 +1,15 @@
-FROM node:16
+#Build Steps
+FROM node:alpine3.10 as build-step
 
-RUN mkdir /usr/src/app && chown node:node /usr/src/app
+RUN mkdir /app
+WORKDIR /app
 
-WORKDIR /usr/src/app
-
-USER node
-COPY --chown=node:node package.json package-lock.json* ./
-
-# ENV NODE_ENV production
-
-# copy the package.json
-# COPY package.json /usr/src/app/
+COPY package.json /app
 RUN npm install
+COPY . /app
 
-COPY --chown=node:node . /usr/src/app
+RUN npm run build
 
-# COPY . /usr/src/app
-
-EXPOSE 8080
-
-# command to run on container start
-CMD [ "npm", "start" ]
-
+#Run Steps
+FROM nginx:1.19.8-alpine  
+COPY --from=build-step /app/build /usr/share/nginx/html

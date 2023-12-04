@@ -152,7 +152,7 @@ parameters:
   - name: NAME 
     displayName: Name
     required: true
-    value: react-app
+    value: react-app-2
   - name: SOURCE_REPOSITORY_URL
     displayName: Git Repository URL
     required: true
