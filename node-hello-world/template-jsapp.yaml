@@ -147,11 +147,11 @@ parameters:
   - name: GITHUB_BRANCH
     displayName: Github branch
     required: true
-    value: main
+    value: feature/test
   - name: NAME 
     displayName: Name
     required: true
-    value: js-app-hello
+    value: js-app-hello-test
   - name: SOURCE_REPOSITORY_URL
     displayName: Git Repository URL
     required: true
