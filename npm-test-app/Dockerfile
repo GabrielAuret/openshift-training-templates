@@ -1,18 +1,17 @@
 FROM node:14
 
+RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-ENV NODE_ENV production
+# ENV NODE_ENV production
 
-# Just copy the package.json...
-COPY package*.json ./
-
-# so we can cache this layer:
+# copy the package.json
+COPY package*.json /usr/src/app/
 RUN npm install
 
-COPY . .
+COPY . /usr/src/app
 
 EXPOSE 8080
 
 # command to run on container start
-CMD [ "npm start" ]
+CMD [ "npm", "start" ]
